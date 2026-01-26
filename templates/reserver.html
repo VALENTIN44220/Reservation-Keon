@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Réserver</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Réserver {{ materiel.nom }}</h1>
+
+    <form method="post">
+        <label>Date de début :</label><br>
+        <input type="date" name="debut" required><br><br>
+
+        <label>Date de fin :</label><br>
+        <input type="date" name="fin" required><br><br>
+
+        <button type="submit">Confirmer la réservation</button>
+    </form>
+
+    <br>
+    <a href="/">Retour</a>
+</body>
+</html>
