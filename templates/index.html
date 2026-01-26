@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Réservation de matériel</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Matériel disponible</h1>
+
+    <ul>
+        {% for m in materiels %}
+        <li>
+            <strong>{{ m.nom }}</strong> — État : {{ m.etat }}
+            {% if m.etat == "disponible" %}
+                <a href="/reserver/{{ m.id }}">Réserver</a>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
