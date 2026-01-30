@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - KEON Réservation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card auth-card-large">
+            <div class="auth-header">
+                <div class="auth-logo">✨</div>
+                <h1 class="auth-title">Créer un compte</h1>
+                <p class="auth-subtitle">Rejoignez KEON Réservation</p>
+            </div>
+            
+            {% if erreur %}
+                <div class="auth-error">
+                    <span class="error-icon">⚠️</span>
+                    <span>{{ erreur }}</span>
+                </div>
+            {% endif %}
+            
+            <form method="POST" action="{{ url_for('register') }}" class="auth-form">
+                <div class="form-group">
+                    <label for="username" class="form-label">
+                        <span class="label-icon">👤</span>
+                        Nom d'utilisateur
+                    </label>
+                    <input type="text" id="username" name="username" class="form-input" 
+                           placeholder="Choisissez un nom d'utilisateur" required autocomplete="username">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="prenom" class="form-label">
+                            <span class="label-icon">📝</span>
+                            Prénom
+                        </label>
+                        <input type="text" id="prenom" name="prenom" class="form-input" 
+                               placeholder="Votre prénom" required autocomplete="given-name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nom" class="form-label">
+                            <span class="label-icon">📝</span>
+                            Nom
+                        </label>
+                        <input type="text" id="nom" name="nom" class="form-input" 
+                               placeholder="Votre nom" required autocomplete="family-name">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <span class="label-icon">🔑</span>
+                        Mot de passe
+                    </label>
+                    <input type="password" id="password" name="password" class="form-input" 
+                           placeholder="Au moins 6 caractères" required minlength="6" autocomplete="new-password">
+                    <small class="form-hint">Minimum 6 caractères requis</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password_confirm" class="form-label">
+                        <span class="label-icon">🔒</span>
+                        Confirmer le mot de passe
+                    </label>
+                    <input type="password" id="password_confirm" name="password_confirm" class="form-input" 
+                           placeholder="Répétez votre mot de passe" required autocomplete="new-password">
+                </div>
+                
+                <button type="submit" class="auth-submit-btn">
+                    <span>S'inscrire</span>
+                    <span class="btn-arrow">→</span>
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>Déjà un compte ?</p>
+                <a href="{{ url_for('login') }}" class="auth-link">Se connecter</a>
+            </div>
+        </div>
+        
+        <div class="auth-background">
+            <div class="bg-shape shape-1"></div>
+            <div class="bg-shape shape-2"></div>
+            <div class="bg-shape shape-3"></div>
+        </div>
+    </div>
+</body>
+</html>

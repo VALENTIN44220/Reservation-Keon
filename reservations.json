@@ -1,0 +1,23 @@
+[
+  {
+    "materiel_id": 5,
+    "debut": "2026-01-30",
+    "fin": "2026-02-06",
+    "username": "Inconnu",
+    "fullname": "Utilisateur inconnu"
+  },
+  {
+    "materiel_id": 9,
+    "debut": "2026-01-29",
+    "fin": "2026-02-06",
+    "username": "Inconnu",
+    "fullname": "Utilisateur inconnu"
+  },
+  {
+    "materiel_id": 8,
+    "debut": "2026-02-03",
+    "fin": "2026-02-06",
+    "username": "Mali",
+    "fullname": "Mali Prince"
+  }
+]

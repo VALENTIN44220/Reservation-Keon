@@ -1,0 +1,12 @@
+{
+  "admin": {
+    "password": "scrypt:32768:8:1$9cEeMOtUB4QOzW7R$f963d33f19d78dcb311814ef2c00832ef90e10abe37da1092d8920fb3f2c5cbaedc71cf0019d0dd49a8810514f0f29e9d21c51da74e71d23577a6a49af8d4fc4",
+    "prenom": "Admin",
+    "nom": "KEON"
+  },
+  "Mali": {
+    "password": "scrypt:32768:8:1$ilKCZMqfhtScNyO4$959c28757fb1347090fcb3ab8d34594c2a85082016d282e1c195a619575c2be503200fcd2297f6b7b220c0b8968abf19dfaf2944073fb68180f0cbdf6314acd0",
+    "prenom": "Mali",
+    "nom": "Prince"
+  }
+}

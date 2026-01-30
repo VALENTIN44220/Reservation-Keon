@@ -1,21 +1,394 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Réservation de matériel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendrier des Réservations</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/locales/fr.global.min.js'></script>
 </head>
 <body>
-    <h1>Matériel disponible</h1>
+    <div class="header">
+        <div class="logo">
+            <span class="logo-icon">📅</span>
+            <h1>Calendrier des Réservations</h1>
+        </div>
+    </div>
 
-    <ul>
-        {% for m in materiels %}
-        <li>
-            <strong>{{ m.nom }}</strong> — État : {{ m.etat }}
-            {% if m.etat == "disponible" %}
-                <a href="/reserver/{{ m.id }}">Réserver</a>
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ul>
+    <div class="container">
+        {% if erreur %}
+        <div class="error-banner-home" id="errorBanner">
+            <span class="error-icon-small">⚠️</span>
+            <span>{{ erreur }}</span>
+        </div>
+        <script>
+            // Faire disparaître le message après 1 seconde
+            setTimeout(function() {
+                var banner = document.getElementById('errorBanner');
+                if (banner) {
+                    banner.classList.add('fade-out');
+                    // Supprimer complètement l'élément après l'animation
+                    setTimeout(function() {
+                        banner.remove();
+                    }, 500);
+                }
+            }, 1000);
+        </script>
+        {% endif %}
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="materiel-list">
+                    <h3>MATÉRIEL</h3>
+                    <div style="margin-bottom: 16px;">
+                        <select id="categorieFilter" style="width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; background-color: white; cursor: pointer;">
+                            <option value="">Toutes les catégories</option>
+                            <option value="SALLE DE REUNION">SALLE DE REUNION</option>
+                            <option value="VEHICULE">VEHICULE</option>
+                            <option value="DRONE">DRONE</option>
+                            <option value="ENCEINTE">ENCEINTE</option>
+                            <option value="VIDEO PROJECTEUR">VIDEO PROJECTEUR</option>
+                        </select>
+                    </div>
+                    <div class="materiel-items">
+                        {% for m in materiels %}
+                        <div class="materiel-item" data-materiel-id="{{ m.id }}" data-materiel-nom="{{ m.nom }}">
+                            <div class="materiel-item-name">{{ m.nom }}</div>
+                            <span class="materiel-item-status status-{{ m.etat|replace('é', 'e') }}">
+                                {% if m.etat == 'disponible' %}Disponible{% elif m.etat == 'réservé' %}Réservé{% else %}Maintenance{% endif %}
+                            </span>
+                            {% if m.etat == 'réservé' %}
+                                {% for r in reservations %}
+                                    {% if r.materiel_id == m.id %}
+                                    <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                                        <span style="font-weight: 500;">👤 {{ r.get('fullname', 'Utilisateur') }}</span><br>
+                                        <span>📅 {{ r.debut.strftime('%d/%m') }} - {{ r.fin.strftime('%d/%m/%Y') }}</span>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="date-selection" id="dateSelection">
+                    <div class="date-selection-header">
+                        <span class="calendar-icon">📅</span>
+                        <h3>Sélection de dates</h3>
+                    </div>
+                    <div class="selected-material" id="selectedMaterial" style="display: none;">
+                        <div class="material-badge">
+                            <span class="material-icon">📦</span>
+                            <span id="selectedMaterialName"></span>
+                        </div>
+                    </div>
+                    <div class="date-display-container">
+                        <div class="date-card start-date">
+                            <div class="date-label">Date de début</div>
+                            <div class="date-value" id="startDate">Sélectionnez une date</div>
+                        </div>
+                        <div class="date-separator">→</div>
+                        <div class="date-card end-date">
+                            <div class="date-label">Date de fin</div>
+                            <div class="date-value" id="endDate">Sélectionnez une date</div>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="createReservationBtn" class="btn btn-primary">
+                            <span class="btn-icon">✓</span>
+                            <span>Confirmer la réservation</span>
+                        </button>
+                        <button id="resetDatesBtn" class="btn btn-secondary">
+                            <span class="btn-icon">↻</span>
+                            <span>Réinitialiser</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="calendar-wrapper">
+                <div id='calendar'></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var selectedMateriel = null;
+            var selectedStartDate = null;
+            var selectedEndDate = null;
+            
+            // Créer la palette de couleurs pour les matériels
+            var colors = [
+                '#EA4335', // rouge
+                '#4285F4', // bleu
+                '#34A853', // vert
+                '#FBBC04', // jaune
+                '#9C27B0', // violet
+                '#FF6D00'  // orange
+            ];
+            
+            var materialColorMap = {};
+            {% for m in materiels %}
+            materialColorMap[{{ m.id }}] = colors[{{ loop.index0 }} % colors.length];
+            {% endfor %}
+            
+            // Convertir les réservations Python en événements FullCalendar
+            var events = [
+                {% for m in materiels %}
+                {% for r in reservations %}
+                {% if r.materiel_id == m.id %}
+                {
+                    title: '{{ m.nom }} - {{ r.get("fullname", "Utilisateur") }}',
+                    start: '{{ r.debut.strftime("%Y-%m-%d") }}',
+                    end: '{{ r.fin.strftime("%Y-%m-%d") }}',
+                    backgroundColor: colors[{{ loop.index0 }} % colors.length],
+                    borderColor: colors[{{ loop.index0 }} % colors.length],
+                    extendedProps: {
+                        materielId: {{ r.materiel_id }},
+                        materielNom: '{{ m.nom }}',
+                        reservePar: '{{ r.get("fullname", "Utilisateur inconnu") }}',
+                        username: '{{ r.get("username", "inconnu") }}'
+                    }
+                },
+                {% endif %}
+                {% endfor %}
+                {% endfor %}
+            ];
+            
+            // Fonction pour formater la date
+            function formatDate(dateStr) {
+                var date = new Date(dateStr + 'T00:00:00');
+                var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                return date.toLocaleDateString('fr-FR', options);
+            }
+            
+            // Fonction pour mettre à jour l'affichage des dates
+            function updateDateDisplay() {
+                var startDateCard = document.querySelector('.date-card.start-date');
+                var endDateCard = document.querySelector('.date-card.end-date');
+                
+                if (selectedStartDate) {
+                    document.getElementById('startDate').textContent = formatDate(selectedStartDate);
+                    startDateCard.classList.add('active');
+                } else {
+                    document.getElementById('startDate').textContent = 'Sélectionnez une date';
+                    startDateCard.classList.remove('active');
+                }
+                
+                if (selectedEndDate) {
+                    document.getElementById('endDate').textContent = formatDate(selectedEndDate);
+                    endDateCard.classList.add('active');
+                } else {
+                    document.getElementById('endDate').textContent = 'Sélectionnez une date';
+                    endDateCard.classList.remove('active');
+                }
+                
+                // Afficher le bouton de création si dates sélectionnées
+                var createBtn = document.getElementById('createReservationBtn');
+                if (selectedStartDate && selectedEndDate && selectedMateriel) {
+                    createBtn.classList.add('active');
+                } else {
+                    createBtn.classList.remove('active');
+                }
+                
+                // Mettre à jour les classes des jours sélectionnés
+                updateHighlightedDates();
+            }
+            
+            // Fonction pour mettre en évidence les jours sélectionnés
+            
+            // Fonction pour mettre en évidence les jours sélectionnés
+            function updateHighlightedDates() {
+                // Supprimer toutes les classes de sélection
+                document.querySelectorAll('.fc-daygrid-day').forEach(function(day) {
+                    day.classList.remove('selected-date', 'selected-start', 'selected-end');
+                });
+                
+                // Si les dates sont sélectionnées, ajouter les classes
+                if (selectedStartDate && selectedEndDate) {
+                    var current = new Date(selectedStartDate);
+                    var end = new Date(selectedEndDate);
+                    
+                    while (current <= end) {
+                        var dateStr = current.toISOString().split('T')[0];
+                        var dayElement = document.querySelector('[data-date="' + dateStr + '"]');
+                        
+                        if (dayElement) {
+                            if (dateStr === selectedStartDate) {
+                                dayElement.classList.add('selected-start');
+                            } else if (dateStr === selectedEndDate) {
+                                dayElement.classList.add('selected-end');
+                            } else {
+                                dayElement.classList.add('selected-date');
+                            }
+                        }
+                        
+                        current.setDate(current.getDate() + 1);
+                    }
+                } else if (selectedStartDate) {
+                    var startElement = document.querySelector('[data-date="' + selectedStartDate + '"]');
+                    if (startElement) {
+                        startElement.classList.add('selected-start');
+                    }
+                }
+            }
+            
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'fr',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,listMonth'
+                },
+                events: events,
+                height: 'auto',
+                contentHeight: 'auto',
+                eventDisplay: 'block',
+                dayCellClassNames: function(arg) {
+                    return 'fc-daycell';
+                },
+                dayCellDidMount: function(info) {
+                    // Ajouter l'attribut data-date à chaque cellule de jour
+                    info.el.setAttribute('data-date', info.dateStr);
+                },
+                eventDidMount: function(info) {
+                    info.el.style.cursor = 'pointer';
+                    // Tooltip avec plus d'informations
+                    var reservePar = info.event.extendedProps.reservePar || 'Utilisateur inconnu';
+                    var debut = info.event.start.toLocaleDateString('fr-FR');
+                    var fin = info.event.end ? new Date(info.event.end.getTime() - 86400000).toLocaleDateString('fr-FR') : debut;
+                    info.el.title = info.event.extendedProps.materielNom + '\nRéservé par: ' + reservePar + '\nDu ' + debut + ' au ' + fin;
+                },
+                datesSet: function(info) {
+                    // Mettre à jour la mise en évidence après un changement de mois
+                    updateHighlightedDates();
+                },
+                dateClick: function(info) {
+                    // Si un matériel est sélectionné
+                    if (!selectedMateriel) {
+                        alert('Veuillez d\'abord sélectionner un matériel');
+                        return;
+                    }
+                    
+                    var clickedDate = info.dateStr;
+                    
+                    // Si pas de date de début, définir la date de début
+                    if (!selectedStartDate) {
+                        selectedStartDate = clickedDate;
+                        updateDateDisplay();
+                    } 
+                    // Si date de début existe mais pas de fin
+                    else if (!selectedEndDate) {
+                        // Vérifier que la date de fin est après la date de début
+                        if (new Date(clickedDate) >= new Date(selectedStartDate)) {
+                            selectedEndDate = clickedDate;
+                            updateDateDisplay();
+                        } else {
+                            alert('La date de fin doit être après la date de début');
+                            selectedStartDate = clickedDate;
+                            selectedEndDate = null;
+                            updateDateDisplay();
+                        }
+                    }
+                    // Si les deux dates sont sélectionnées, réinitialiser et recommencer
+                    else {
+                        selectedStartDate = clickedDate;
+                        selectedEndDate = null;
+                        updateDateDisplay();
+                    }
+                }
+            });
+            calendar.render();
+            
+            // Ajouter des événements aux éléments du matériel
+            document.querySelectorAll('.materiel-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    var items = document.querySelectorAll('.materiel-item');
+                    items.forEach(function(i) {
+                        i.style.backgroundColor = '';
+                    });
+                    this.style.backgroundColor = '#e8f0fe';
+                    
+                    // Sélectionner le matériel
+                    selectedMateriel = {
+                        id: this.dataset.materielId,
+                        nom: this.dataset.materielNom
+                    };
+                    
+                    // Afficher le matériel sélectionné
+                    document.getElementById('selectedMaterialName').textContent = selectedMateriel.nom;
+                    document.getElementById('selectedMaterial').style.display = 'block';
+                    
+                    // Afficher le panneau de sélection des dates
+                    document.getElementById('dateSelection').style.display = 'block';
+                });
+            });
+            
+            // Bouton de réinitialisation des dates
+            document.getElementById('resetDatesBtn').addEventListener('click', function() {
+                selectedStartDate = null;
+                selectedEndDate = null;
+                updateDateDisplay();
+            });
+            
+            // Bouton de création de réservation
+            document.getElementById('createReservationBtn').addEventListener('click', function() {
+                if (selectedStartDate && selectedEndDate && selectedMateriel) {
+                    // Créer un formulaire et le soumettre
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/reserver/' + selectedMateriel.id;
+                    
+                    var inputStart = document.createElement('input');
+                    inputStart.type = 'hidden';
+                    inputStart.name = 'debut';
+                    inputStart.value = selectedStartDate;
+                    
+                    var inputEnd = document.createElement('input');
+                    inputEnd.type = 'hidden';
+                    inputEnd.name = 'fin';
+                    inputEnd.value = selectedEndDate;
+                    
+                    form.appendChild(inputStart);
+                    form.appendChild(inputEnd);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+            
+            // Gestion du filtre par catégorie
+            document.getElementById('categorieFilter').addEventListener('change', function() {
+                var selectedCategory = this.value.toLowerCase();
+                var items = document.querySelectorAll('.materiel-item');
+                
+                items.forEach(function(item) {
+                    var nom = item.dataset.materielNom.toLowerCase();
+                    var shouldShow = false;
+                    
+                    if (selectedCategory === '') {
+                        shouldShow = true;
+                    } else if (selectedCategory === 'salle de reunion') {
+                        shouldShow = nom.includes('salle') || nom.includes('phonebox');
+                    } else if (selectedCategory === 'vehicule') {
+                        shouldShow = nom.includes('citroen') || nom.includes('peugeot') || nom.includes('scenic') || nom.includes('megane') || nom.includes('véhicule');
+                    } else if (selectedCategory === 'drone') {
+                        shouldShow = nom.includes('drone');
+                    } else if (selectedCategory === 'enceinte') {
+                        shouldShow = nom.includes('jabra') || nom.includes('speak');
+                    } else if (selectedCategory === 'video projecteur') {
+                        shouldShow = nom.includes('videoprojecteur') || nom.includes('vidéoprojecteur');
+                    }
+                    
+                    item.style.display = shouldShow ? '' : 'none';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
